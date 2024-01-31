@@ -1,5 +1,4 @@
 const express = require('express');
-const { Request, Response } = require('express');
 const moment = require('moment-timezone');
 const axios = require('axios');
 const { Pool } = require('pg');
@@ -18,20 +17,20 @@ const pool = new Pool({
 app.use(express.json());
 
 // POST endpoint to create a user
-app.post('/user', async (req, res) => {
-  const { fullName, customMessage, birthday, location, email } = req.body;
+app.post('/user',  async (req, res) => {
+  const { full_name, custom_message, birthday, location, email } = req.body;
 
-  if (!fullName || !customMessage || !birthday || !location || !email) {
+  if (!full_name || !birthday || !location || !email) {
     return res.status(400).json({ error: 'Invalid user data' });
   }
 
-  const client = await pool.connect();
+  const client =  await pool.connect();
 
   try {
-    await client.query('BEGIN');
+     client.query('BEGIN');
 
-    const insertUserQuery = 'INSERT INTO users (full_name, custom_message, birthday, location, email) VALUES ($1, $2, $3, $4, $5)';
-    await client.query(insertUserQuery, [fullName, customMessage, birthday, location, email]);
+    const insertUserQuery = 'INSERT INTO surya.users (full_name, custom_message, birthday, location, email) VALUES ($1, $2, $3, $4, $5)';
+    await client.query(insertUserQuery, [full_name, custom_message, birthday, location, email]);
 
     await client.query('COMMIT');
 
@@ -47,15 +46,15 @@ app.post('/user', async (req, res) => {
 
 // DELETE endpoint to delete a user
 app.delete('/user', async (req, res) => {
-  const { fullName } = req.body;
+  const { full_name } = req.body;
 
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const deleteUserQuery = 'DELETE FROM users WHERE full_name = $1';
-    const result = await client.query(deleteUserQuery, [fullName]);
+    const deleteUserQuery = 'DELETE FROM surya.users WHERE full_name = $1';
+    const result = await client.query(deleteUserQuery, [full_name]);
 
     await client.query('COMMIT');
 
@@ -75,9 +74,9 @@ app.delete('/user', async (req, res) => {
 
 // PUT endpoint to edit user details
 app.put('/user', async (req, res) => {
-  const { fullName, newBirthday, location, newEmail } = req.body;
+  const { full_name, new_birthday, location, new_email } = req.body;
 
-  if (!fullName || !newBirthday || !location || !newEmail) {
+  if (!full_name || !new_birthday || !location || !new_email) {
     return res.status(400).json({ error: 'Invalid user data' });
   }
 
@@ -86,8 +85,8 @@ app.put('/user', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const updateUserQuery = 'UPDATE users SET birthday = $1, location = $2, email = $3 WHERE full_name = $4 RETURNING *';
-    const result = await client.query(updateUserQuery, [newBirthday, location, newEmail, fullName]);
+    const updateUserQuery = 'UPDATE surya.users SET birthday = $1, location = $2, email = $3 WHERE full_name = $4 RETURNING *';
+    const result = await client.query(updateUserQuery, [new_birthday, location, new_email, fullName]);
 
     await client.query('COMMIT');
 
@@ -122,7 +121,7 @@ setInterval(() => {
 const scheduleBirthdayMessages = () => {
   const now = moment();
 
-  pool.query('SELECT * FROM users', (error, result) => {
+  pool.query('SELECT * FROM surya.users', (error, result) => {
     if (error) {
       console.error('Error querying users:', error);
       return;
@@ -177,6 +176,10 @@ const sendBirthdayMessage = async (user) => {
   }
 };
 
+app.get('/', (req, res) => {
+  res.send('Birthday Remider App Running!');
+});
+
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server Running on ${port}`);
 });
