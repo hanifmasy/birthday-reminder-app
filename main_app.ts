@@ -86,13 +86,13 @@ app.put('/user', async (req, res) => {
     await client.query('BEGIN');
 
     const updateUserQuery = 'UPDATE surya.users SET birthday = $1, location = $2, email = $3 WHERE full_name = $4 RETURNING *';
-    const result = await client.query(updateUserQuery, [new_birthday, location, new_email, fullName]);
+    const result = await client.query(updateUserQuery, [new_birthday, location, new_email, full_name]);
 
     await client.query('COMMIT');
 
     if (result.rowCount === 1) {
       const originalBirthday = result.rows[0].birthday;
-      if (moment(originalBirthday).format('MM-DD') !== moment(newBirthday).format('MM-DD')) {
+      if (moment(originalBirthday).format('MM-DD') !== moment(new_birthday).format('MM-DD')) {
         sendBirthdayMessage(result.rows[0]);
       }
 
@@ -140,7 +140,7 @@ const scheduleBirthdayMessages = () => {
 
 const sendBirthdayMessage = async (user) => {
   try {
-    const response = await axios.post('https://email-service.digitalenvision.com.au', {
+    const response = await axios.post('https://email-service.digitalenvision.com.au/send-email', {
       email: `${user.full_name}`,
       message: `Hey, ${user.full_name}, ${user.custom_message || 'Happy birthday'}`,
     });
