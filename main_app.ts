@@ -1,14 +1,12 @@
-// Import necessary modules and libraries
-import express, { Request, Response } from 'express';
-import moment from 'moment-timezone';
-import axios from 'axios';
-import { Pool } from 'pg';
+const express = require('express');
+const { Request, Response } = require('express');
+const moment = require('moment-timezone');
+const axios = require('axios');
+const { Pool } = require('pg');
 
-// Initialize Express application
 const app = express();
 const port = 3000;
 
-// Initialize PostgreSQL connection pool
 const pool = new Pool({
   user: 'hanifm',
   host: 'localhost',
@@ -17,20 +15,18 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Middleware to parse JSON requests
 app.use(express.json());
 
 // POST endpoint to create a user
-app.post('/user', async (req: Request, res: Response) => {
+app.post('/user', async (req, res) => {
   const { fullName, customMessage, birthday, location, email } = req.body;
 
-  // Validate request payload
   if (!fullName || !customMessage || !birthday || !location || !email) {
     return res.status(400).json({ error: 'Invalid user data' });
   }
 
-  // Save user to the PostgreSQL database
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
 
@@ -50,11 +46,11 @@ app.post('/user', async (req: Request, res: Response) => {
 });
 
 // DELETE endpoint to delete a user
-app.delete('/user', async (req: Request, res: Response) => {
+app.delete('/user', async (req, res) => {
   const { fullName } = req.body;
 
-  // Remove user from the PostgreSQL database
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
 
@@ -78,16 +74,15 @@ app.delete('/user', async (req: Request, res: Response) => {
 });
 
 // PUT endpoint to edit user details
-app.put('/user', async (req: Request, res: Response) => {
+app.put('/user', async (req, res) => {
   const { fullName, newBirthday, location, newEmail } = req.body;
 
-  // Validate request payload
   if (!fullName || !newBirthday || !location || !newEmail) {
     return res.status(400).json({ error: 'Invalid user data' });
   }
 
-  // Find the user in the PostgreSQL database
   const client = await pool.connect();
+
   try {
     await client.query('BEGIN');
 
@@ -97,7 +92,6 @@ app.put('/user', async (req: Request, res: Response) => {
     await client.query('COMMIT');
 
     if (result.rowCount === 1) {
-      // If the birthday is updated, adjust the scheduled messages
       const originalBirthday = result.rows[0].birthday;
       if (moment(originalBirthday).format('MM-DD') !== moment(newBirthday).format('MM-DD')) {
         sendBirthdayMessage(result.rows[0]);
@@ -116,11 +110,18 @@ app.put('/user', async (req: Request, res: Response) => {
   }
 });
 
-// Schedule the daily task to send birthday messages
+// Schedule the daily task to send birthday messages at 9 am local time
+setInterval(() => {
+  const now = moment();
+
+  if (now.hour() === 9 && now.minute() === 0) {
+    scheduleBirthdayMessages();
+  }
+}, 60000); // Check every minute
+
 const scheduleBirthdayMessages = () => {
   const now = moment();
 
-  // Iterate through users and send birthday messages if it's their birthday
   pool.query('SELECT * FROM users', (error, result) => {
     if (error) {
       console.error('Error querying users:', error);
@@ -138,8 +139,7 @@ const scheduleBirthdayMessages = () => {
   });
 };
 
-// Function to send birthday messages
-const sendBirthdayMessage = async (user: any) => {
+const sendBirthdayMessage = async (user) => {
   try {
     const response = await axios.post('https://email-service.digitalenvision.com.au', {
       email: `${user.full_name}`,
@@ -177,17 +177,6 @@ const sendBirthdayMessage = async (user: any) => {
   }
 };
 
-
-// Schedule the daily task to send birthday messages at 9 am local time
-setInterval(() => {
-  const now = moment();
-
-  if (now.hour() === 9 && now.minute() === 0) {
-    scheduleBirthdayMessages();
-  }
-}, 60000); // Check every minute
-
-// Start the Express server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
